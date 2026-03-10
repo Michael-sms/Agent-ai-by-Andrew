@@ -146,10 +146,11 @@ class Agent:
 
             # ── 判断是否有工具调用 ─────────────────────────
             if llm_resp.tool_calls:
-                # 处理所有工具调用（OpenAI 可能同时返回多个）
+                # 将含 tool_calls 的 assistant 消息以原始 dict 形式写入 memory
+                # 这是 OpenAI/DeepSeek 协议要求：tool 消息必须紧跟在含 tool_calls 的 assistant 消息之后
                 assistant_msg: dict = {
                     "role": "assistant",
-                    "content": llm_resp.content,
+                    "content": llm_resp.content,  # 可以为空字符串或 None
                     "tool_calls": [
                         {
                             "id": tc["id"],
@@ -162,11 +163,7 @@ class Agent:
                         for tc in llm_resp.tool_calls
                     ],
                 }
-                # 直接向 memory 内部追加，保持结构完整
-                from memory.conversation import Message
-                self.memory._messages.append(
-                    Message(role="assistant", content=json.dumps(assistant_msg))
-                )
+                self.memory.add_raw(assistant_msg)
 
                 for tc in llm_resp.tool_calls:
                     tool_name = tc["name"]
@@ -179,15 +176,13 @@ class Agent:
                     result = self._call_tool(tool_name, tool_args)
                     step.tool_result = result.to_str()
 
-                    # 工具结果写回对话历史
-                    self.memory._messages.append(
-                        Message(
-                            role="tool",
-                            content=result.to_str(),
-                            tool_name=tool_name,
-                            tool_call_id=tc["id"],
-                        )
-                    )
+                    # tool 结果消息：必须包含 tool_call_id 与对应的 assistant tool_calls id 匹配
+                    self.memory.add_raw({
+                        "role": "tool",
+                        "tool_call_id": tc["id"],
+                        "name": tool_name,
+                        "content": result.to_str(),
+                    })
                     logger.info("工具结果: %s", result.to_str()[:200])
 
             else:

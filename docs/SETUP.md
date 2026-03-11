@@ -21,6 +21,13 @@
 | | `prompt_manager.py` | 系统 Prompt 模板管理 |
 | | `agent.py` | **ReAct 主循环**，逐步记录执行轨迹 |
 | **tests/** | `test_core_modules.py` | 25 个本地单元测试（无需 API）|
+| **evaluation/** | `evaluator.py` | 按 YAML 测试套件驱动 Agent，自动判断结果 |
+| | `metrics.py` | 汇总通过率、延迟、Token 等指标 |
+| | `reporter.py` | 控制台输出 + 生成 Markdown 报告 |
+| **benchmarks/** | `test_cases.yaml` | 功能测试用例（各工具正常场景）|
+| | `edge_cases.yaml` | 边界测试用例（安全拦截、异常输入）|
+| | `regression_suite.yaml` | 回归测试套件（历史 Bug + 冒烟测试）|
+| | `run_benchmark.py` | 基准测试命令行入口 |
 | **根目录** | `main.py` | 交互式/单次提问入口 |
 | | `.env.example` | 配置模板 |
 
@@ -292,6 +299,124 @@ python -m pytest tests/test_core_modules.py -v
 OPENAI_BASE_URL=http://localhost:11434/v1
 DEFAULT_MODEL=llama3.1
 OPENAI_API_KEY=ollama
+```
+
+---
+
+## 测试数据集与基准测试使用说明
+
+### 文件结构
+
+```
+benchmarks/
+├── test_cases.yaml        # 功能测试：各工具正常调用场景（13 条）
+├── edge_cases.yaml        # 边界测试：安全拦截、Prompt Injection、异常输入（13 条）
+├── regression_suite.yaml  # 回归测试：历史 Bug + 冒烟 + 多步推理（11 条）
+└── run_benchmark.py       # 命令行运行入口
+
+evaluation/
+├── evaluator.py   # 核心：加载 YAML → 运行 Agent → 自动判定通过/失败
+├── metrics.py     # 汇总统计：通过率、延迟、Token、分类明细
+└── reporter.py    # 输出：控制台可读报告 + Markdown 文件（outputs/）
+```
+
+### 前置条件
+
+1. 已配置 `.env`（需要真实 API Key，因为要调用 LLM）
+2. 安装新增依赖（新增了 `pyyaml`）：
+
+```powershell
+cd "c:\Users\Lenovo\Desktop\2526source\agent-ai"
+uv sync
+```
+
+### 运行测试套件
+
+```powershell
+# 功能测试（验证各工具正常调用）
+python benchmarks/run_benchmark.py --suite test_cases
+
+# 边界测试（验证安全拦截是否有效）
+python benchmarks/run_benchmark.py --suite edge_cases
+
+# 回归测试（防止历史 Bug 重现）
+python benchmarks/run_benchmark.py --suite regression_suite
+
+# 一键运行全部套件
+python benchmarks/run_benchmark.py --suite all
+
+# 运行并保存 Markdown 报告到 outputs/ 目录
+python benchmarks/run_benchmark.py --suite all --save
+```
+
+### 查看报告
+
+控制台会直接打印汇总表：
+
+```
+────────────────────────────────────────────────────────────
+  📊 Benchmark Report — 功能测试
+────────────────────────────────────────────────────────────
+  总用例：13  通过：12  失败：1
+  通过率：92.3%
+  平均延迟：1.83s  最大延迟：4.21s
+  平均步骤：1.5
+  Token 消耗：输入 4200  输出 860
+
+  分类                 总数 通过  通过率
+  ──────────────────── ──── ──── ───────
+  calculator              4    4  100.0%
+  file_operations         4    3   75.0%
+  web_search              2    2  100.0%
+  ...
+────────────────────────────────────────────────────────────
+```
+
+加 `--save` 后报告还会写入 `outputs/benchmark_功能测试_20260311_120000.md`。
+
+### 在代码中直接调用
+
+```python
+from evaluation import Evaluator, MetricsCollector, BenchmarkReport
+
+# 运行套件
+ev = Evaluator()
+results = ev.run_suite("benchmarks/test_cases.yaml")
+
+# 统计
+summary = MetricsCollector.summarize("功能测试", results)
+BenchmarkReport.print_summary(summary)
+BenchmarkReport.save_markdown(summary)  # 写入 outputs/
+```
+
+### 添加自定义测试用例
+
+在任意 YAML 文件的 `cases:` 列表中追加，字段说明：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `name` | str | ✅ | 用例名称（唯一标识）|
+| `category` | str | ✅ | 分类（用于报告分组）|
+| `input` | str | ✅ | 发送给 Agent 的问题 |
+| `expected_tool` | str | — | Agent 必须调用的工具名 |
+| `expected_tools` | list | — | Agent 必须调用的全部工具（多步）|
+| `expected_output_contains` | list | — | 答案中必须包含其中至少一个字符串 |
+| `expected_output_not_contains` | list | — | 答案中不得包含任意一个字符串 |
+| `expected_behavior` | str | — | 描述性说明（不做自动判断，仅记录）|
+| `should_succeed` | bool | — | `false` 时要求 Agent 输出拒绝词 |
+| `max_steps` | int | — | Agent 完成任务允许的最大步骤数 |
+| `prompt_override` | dict | — | 覆盖 Agent 的 identity / objective |
+
+**示例：**
+
+```yaml
+cases:
+  - name: "我的自定义用例"
+    category: "calculator"
+    input: "计算 99 * 99"
+    expected_tool: "calculator"
+    expected_output_contains: ["9801"]
+    max_steps: 2
 ```
 
 ---

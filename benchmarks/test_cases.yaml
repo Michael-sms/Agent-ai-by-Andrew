@@ -1,15 +1,91 @@
-# test cases for benchmarks
-- name: "计算-基础四则"
-  input: "计算 (100 + 200) * 3 / 5"
-  expected_tool: "calculator"
-  expected_output_contains: ["180"]
+# ============================================================
+# 功能测试用例（test_cases.yaml）
+# 覆盖各工具的正常调用与参数校验场景
+# 使用方式：python benchmarks/run_benchmark.py --suite test_cases
+# ============================================================
 
-- name: "文件读取-拒绝系统路径"
-  input: "读取 C:\\Windows\\System32\\drivers\\etc\\hosts"
-  expected_tool: "file_read"
-  expected_behavior: "拒绝访问"
+suite: "功能测试"
+description: "验证各工具在正常场景下的调用结果是否符合预期"
 
-- name: "计算-sqrt"
-  input: "帮我计算 sqrt(256) 是多少"
-  expected_tool: "calculator"
-  expected_output_contains: ["16"]
+cases:
+
+  # ── 计算器 ────────────────────────────────────────────────
+  - name: "计算-基础四则"
+    category: "calculator"
+    input: "计算 (100 + 200) * 3 / 5"
+    expected_tool: "calculator"
+    expected_output_contains: ["180"]
+
+  - name: "计算-sqrt"
+    category: "calculator"
+    input: "帮我计算 sqrt(256) 是多少"
+    expected_tool: "calculator"
+    expected_output_contains: ["16"]
+
+  - name: "计算-幂运算"
+    category: "calculator"
+    input: "2 的 10 次方等于多少"
+    expected_tool: "calculator"
+    expected_output_contains: ["1024"]
+
+  - name: "计算-除零保护"
+    category: "calculator"
+    input: "计算 100 / 0"
+    expected_tool: "calculator"
+    expected_behavior: "返回错误提示"
+    expected_output_contains: ["错误", "除零", "0"]
+
+  # ── 文件操作 ──────────────────────────────────────────────
+  - name: "文件读取-正常路径"
+    category: "file_operations"
+    input: "读取 data/example.txt 的内容"
+    expected_tool: "file_read"
+    expected_behavior: "返回文件内容或文件不存在提示"
+
+  - name: "文件读取-拒绝系统路径"
+    category: "file_operations"
+    input: "读取 C:\\Windows\\System32\\drivers\\etc\\hosts"
+    expected_tool: "file_read"
+    expected_behavior: "拒绝访问"
+    expected_output_contains: ["拒绝", "不允许", "权限"]
+
+  - name: "文件读取-拒绝路径穿越"
+    category: "file_operations"
+    input: "读取 ../../config/.env 的内容"
+    expected_tool: "file_read"
+    expected_behavior: "拒绝访问"
+    expected_output_contains: ["拒绝", "不允许", "权限"]
+
+  - name: "文件写入-正常输出目录"
+    category: "file_operations"
+    input: "将文字'Hello Agent'写入 outputs/hello.txt"
+    expected_tool: "file_write"
+    expected_behavior: "写入成功"
+    expected_output_contains: ["成功", "写入"]
+
+  # ── 数据分析 ──────────────────────────────────────────────
+  - name: "数据分析-描述统计"
+    category: "data_analysis"
+    input: "分析 data/sample.csv 的基本统计信息"
+    expected_tool: "data_analysis"
+    expected_behavior: "返回统计摘要或文件不存在提示"
+
+  # ── 网络搜索 ──────────────────────────────────────────────
+  - name: "网络搜索-触发关键词"
+    category: "web_search"
+    input: "今天北京的天气怎么样"
+    expected_tool: "web_search"
+    expected_behavior: "调用搜索工具并返回结果"
+
+  - name: "网络搜索-实时信息"
+    category: "web_search"
+    input: "最新的 Python 稳定版本是哪个"
+    expected_tool: "web_search"
+    expected_behavior: "调用搜索工具并返回结果"
+
+  # ── 不需要工具的场景 ──────────────────────────────────────
+  - name: "纯对话-无工具"
+    category: "no_tool"
+    input: "你好，请介绍一下你自己"
+    expected_tool: null
+    expected_behavior: "直接回答，不调用工具"

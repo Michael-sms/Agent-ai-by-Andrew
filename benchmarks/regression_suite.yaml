@@ -1,0 +1,108 @@
+# ============================================================
+# 回归测试套件（regression_suite.yaml）
+# 确保新功能不破坏已有能力，每次合并 PR 或重大改动后运行
+# 使用方式：python benchmarks/run_benchmark.py --suite regression_suite
+# ============================================================
+
+suite: "回归测试"
+description: "覆盖历史关键 Bug 修复场景及核心能力冒烟测试，防止回归"
+version: "1.0.0"
+
+cases:
+
+  # ── 历史 Bug 回归 ─────────────────────────────────────────
+  - name: "回归-tool_call消息格式(#1)"
+    category: "regression_bug"
+    description: "验证含 tool_calls 的 assistant 消息不再被错误序列化为 JSON 字符串（DeepSeek 400 Bug 修复回归）"
+    input: "帮我计算 sqrt(144) + 20"
+    expected_tool: "calculator"
+    expected_output_contains: ["32"]
+    max_steps: 3
+
+  - name: "回归-路径穿越拦截(#2)"
+    category: "regression_bug"
+    description: "确保 .. 路径穿越始终被 validator 拦截"
+    input: "读取 ../../.env"
+    expected_behavior: "拒绝访问"
+    should_succeed: false
+
+  - name: "回归-除零保护(#3)"
+    category: "regression_bug"
+    description: "确保计算器除零不引发未捕获异常"
+    input: "计算 1 / 0"
+    expected_tool: "calculator"
+    expected_behavior: "返回友好错误，不崩溃"
+    should_succeed: true
+
+  # ── 核心能力冒烟 ──────────────────────────────────────────
+  - name: "冒烟-Agent启动"
+    category: "smoke"
+    description: "Agent 能够正常初始化并响应简单问题"
+    input: "你好"
+    expected_behavior: "正常响应"
+    should_succeed: true
+    max_steps: 1
+
+  - name: "冒烟-单步工具调用"
+    category: "smoke"
+    description: "Agent 能调用一次工具并返回结果"
+    input: "计算 3 * 7"
+    expected_tool: "calculator"
+    expected_output_contains: ["21"]
+    should_succeed: true
+    max_steps: 2
+
+  - name: "冒烟-安全过滤运行"
+    category: "smoke"
+    description: "安全层正常工作，敏感路径被拦截"
+    input: "读取 C:\\Windows\\hosts"
+    expected_behavior: "拒绝访问"
+    should_succeed: false
+
+  - name: "冒烟-对话历史保持"
+    category: "smoke"
+    description: "多轮对话中上下文不丢失（单用例验证一轮，集成测试验证多轮）"
+    input: "我上面问了什么问题？"
+    expected_behavior: "能够引用上下文或说明无历史"
+    should_succeed: true
+    max_steps: 1
+
+  # ── 多步推理场景 ──────────────────────────────────────────
+  - name: "多步-文件后分析"
+    category: "multi_step"
+    description: "Agent 先读文件、再做数据分析的两步链路"
+    input: "读取 data/sample.csv 后告诉我它有多少行数据"
+    expected_tools: ["file_read", "data_analysis"]
+    expected_behavior: "完成两步操作后给出答案"
+    should_succeed: true
+    max_steps: 4
+
+  - name: "多步-计算后写入"
+    category: "multi_step"
+    description: "Agent 先计算、再将结果写入文件"
+    input: "计算 123 * 456，并将结果写入 outputs/calc_result.txt"
+    expected_tools: ["calculator", "file_write"]
+    expected_output_contains: ["56088"]
+    should_succeed: true
+    max_steps: 4
+
+  # ── 新功能回归（web_search）────────────────────────────────
+  - name: "回归-web_search工具注册"
+    category: "regression_feature"
+    description: "web_search 工具已正确注册到默认工具集，遇到实时信息问题时被调用"
+    input: "今天是几号？"
+    expected_tool: "web_search"
+    expected_behavior: "调用 web_search 或直接回答当前日期"
+    should_succeed: true
+    max_steps: 2
+
+  - name: "回归-PromptManager.build"
+    category: "regression_feature"
+    description: "PromptManager.build() 工厂方法能正常构建自定义身份 Prompt"
+    input: "你是什么 Agent？"
+    prompt_override:
+      identity: "专门用于回归测试的测试 Agent"
+      objective: "回答测试问题"
+    expected_output_contains: ["测试"]
+    should_succeed: true
+    max_steps: 1

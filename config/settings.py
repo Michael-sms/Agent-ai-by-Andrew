@@ -33,6 +33,11 @@ class Settings:
     # ── 日志 ───────────────────────────────────────────────
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
+    # ── 网络搜索 ───────────────────────────────────────────
+    TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")          # 留空则降级为 DuckDuckGo
+    SEARCH_MAX_RESULTS: int = int(os.getenv("SEARCH_MAX_RESULTS", "5"))
+    SEARCH_TIMEOUT: int = int(os.getenv("SEARCH_TIMEOUT", "10"))
+
     def validate(self) -> None:
         """启动时检查必要配置。"""
         if not self.OPENAI_API_KEY:

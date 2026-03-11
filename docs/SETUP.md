@@ -12,6 +12,7 @@
 | | `file_operations.py` | 文件读写（路径白名单限制）|
 | | `calculator.py` | 安全数学表达式求值（AST 沙箱）|
 | | `data_analysis.py` | Pandas CSV 分析 |
+| | `web_search.py` | 网络搜索（Tavily / DuckDuckGo 双后端）|
 | **security/** | `secrets_filter.py` | 过滤 API Key / Token / JWT |
 | | `sanitizer.py` | Prompt Injection 检测、长度截断 |
 | | `validator.py` | 参数类型/路径穿越校验 |
@@ -124,7 +125,8 @@ agent-ai/
 │   ├── base_tool.py               # 工具基类
 │   ├── file_operations.py         # 文件读写
 │   ├── calculator.py              # 安全计算器
-│   └── data_analysis.py           # Pandas 数据分析
+│   ├── data_analysis.py           # Pandas 数据分析
+│   └── web_search.py              # 网络搜索（Tavily/DuckDuckGo）
 │
 ├── security/                      # 安全层
 │   ├── secrets_filter.py          # 敏感信息过滤
@@ -147,6 +149,131 @@ agent-ai/
 
 ---
 
+## Prompt 模版管理器使用说明
+
+`core/prompt_manager.py` 已升级为结构化模板，包含：
+- 身份（你是谁）
+- 核心目标（要完成什么、输出什么）
+- 行为边界与准则
+- 异常与错误处理（Bug 时如何操作）
+- 工具调用格式
+
+### 1）默认使用（无需改代码）
+
+直接创建 `Agent` 时，会自动加载默认模板：
+
+```python
+from core import Agent
+
+agent = Agent()
+```
+
+### 2）构建专用 Prompt（推荐）
+
+使用 `PromptManager.build()` 指定身份与任务目标：
+
+```python
+from core import Agent
+from core.prompt_manager import PromptManager
+
+pm = PromptManager.build(
+    identity="企业招聘的简历筛选 Agent",
+    objective="根据岗位要求对候选人简历进行匹配评分，输出评分表与推荐理由",
+    extra_rules="输出结果必须包含：候选人姓名、匹配分数、三条推荐理由。",
+)
+
+agent = Agent(prompt_manager=pm)
+```
+
+### 3）运行中动态修改 Prompt
+
+```python
+from core.prompt_manager import PromptManager
+
+pm = PromptManager()
+pm.set_system("你的完整 system prompt")
+pm.append_system("\n补充规则：禁止输出候选人手机号")
+```
+
+### 4）查看“生成后的 Prompt”日志
+
+`PromptManager` 已在以下场景输出完整 Prompt 日志：
+- 初始化 `PromptManager()`
+- 调用 `PromptManager.build(...)`
+- 调用 `set_system(...)`
+- 调用 `append_system(...)`
+
+要看到这些日志，请在 `.env` 中设置：
+
+```env
+LOG_LEVEL=DEBUG
+```
+
+然后运行程序，查看控制台或 `logs/agent.log`。
+
+### 5）DeepSeek 最小可运行示例（可直接复制）
+
+先在 `.env` 中配置（DeepSeek 走 OpenAI 兼容接口）：
+
+```env
+OPENAI_API_KEY=sk-你的DeepSeekKey
+OPENAI_BASE_URL=https://api.deepseek.com/v1
+DEFAULT_MODEL=deepseek-chat
+LOG_LEVEL=DEBUG
+```
+
+然后在项目根目录新建并运行以下代码（示例中会打印当前生效 Prompt，便于你核对模板准确性）：
+
+```python
+from core import Agent
+from core.prompt_manager import PromptManager
+from tools import get_default_tools
+
+pm = PromptManager.build(
+    identity="企业招聘的简历筛选 Agent",
+    objective="根据岗位要求筛选候选人简历，输出候选人评分、匹配理由与推荐结论",
+    extra_rules="输出必须包含：候选人姓名、匹配分、三条理由、是否推荐。",
+)
+
+print("===== 当前生效 Prompt =====")
+print(pm.system_prompt)
+print("==========================")
+
+agent = Agent(
+    tools=get_default_tools(),
+    prompt_manager=pm,
+)
+
+question = "请给出一个用于筛选 Python 后端工程师简历的评分标准模板"
+result = agent.run(question)
+
+print("\n===== Agent 输出 =====")
+print(result.answer)
+print("\n===== 执行摘要 =====")
+print(
+    f"steps={len(result.steps)}, "
+    f"tool_calls={result.total_tool_calls}, "
+    f"tokens(in/out)={result.total_input_tokens}/{result.total_output_tokens}, "
+    f"latency={result.total_latency:.2f}s"
+)
+```
+
+运行命令：
+
+```powershell
+cd "c:\Users\Lenovo\Desktop\2526source\agent-ai"
+python main.py "给我一份用于招聘 Python 后端工程师的简历筛选标准"
+```
+
+或运行你自己的脚本：
+
+```powershell
+cd "c:\Users\Lenovo\Desktop\2526source\agent-ai"
+python your_demo.py
+```
+
+---
+
 ## 常见问题
 
 **Q: 运行测试时提示 `ModuleNotFoundError`？**  
@@ -165,4 +292,63 @@ python -m pytest tests/test_core_modules.py -v
 OPENAI_BASE_URL=http://localhost:11434/v1
 DEFAULT_MODEL=llama3.1
 OPENAI_API_KEY=ollama
+```
+
+---
+
+## web_search 工具使用说明
+
+`tools/web_search.py` 实现了 `WebSearchTool`，已内置于 `get_default_tools()`，无需手动注册。
+
+### 工作原理
+
+Agent 会根据问题语义**自动判断**是否调用该工具，无需用户指定。典型触发场景：
+- "北京今天天气怎么样"
+- "最新的 Python 版本是什么"
+- "今天有什么热点新闻"
+- 任何需要**实时/联网**获取信息的问题
+
+### 两种搜索后端
+
+| 后端 | 需要 Key | 结果质量 | 适用场景 |
+|------|---------|---------|---------|
+| **Tavily** | 是（免费额度） | ⭐⭐⭐⭐⭐ | 生产/演示推荐 |
+| **DuckDuckGo** | 否 | ⭐⭐⭐ | 快速验证、学习调试 |
+
+未设置 `TAVILY_API_KEY` 时自动降级到 DuckDuckGo，零配置可运行。
+
+### 配置 Tavily（推荐）
+
+1. 前往 [https://app.tavily.com](https://app.tavily.com) 免费注册，获取 API Key
+2. 在 `.env` 中添加：
+
+```env
+TAVILY_API_KEY=tvly-your-tavily-key-here
+SEARCH_MAX_RESULTS=5    # 可选，单次最多返回条数，默认 5
+SEARCH_TIMEOUT=10       # 可选，请求超时秒数，默认 10
+```
+
+### 示例：验证 web_search 是否正常调用
+
+```powershell
+cd "c:\Users\Lenovo\Desktop\2526source\agent-ai"
+python main.py "北京今天的天气怎么样"
+```
+
+看到日志中出现如下内容，说明工具已被 Agent 正确调用：
+
+```
+[INFO] tool.web_search | 网络搜索 | 后端=duckduckgo | query='北京今天的天气' | max_results=5
+[INFO] tool.web_search | 搜索完成，共返回 3 条结果
+```
+
+### 在文件结构中的位置
+
+```
+tools/
+├── base_tool.py       # 工具基类
+├── file_operations.py
+├── calculator.py
+├── data_analysis.py
+└── web_search.py      # ← 新增：网络搜索工具
 ```

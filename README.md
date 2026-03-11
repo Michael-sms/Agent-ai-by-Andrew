@@ -4,9 +4,39 @@
 
 ---
 
-## 项目进度（2026-03-10）
+## 项目进度
 
-### 今日完成
+### 2026-03-11 更新
+
+#### ✨ 新增功能：网络搜索工具（`tools/web_search.py`）
+- 新增 `WebSearchTool`，Agent 可根据问题语义**自动判断**是否需要联网搜索，无需用户手动指定
+- 典型触发场景：天气查询、最新新闻、实时数据、当前事件等
+- 支持**双后端**，按优先级自动切换：
+  - **Tavily Search API**（推荐）：专为 LLM 设计，结果质量高，免费额度注册即得
+  - **DuckDuckGo Instant Answer API**（降级方案）：无需任何 Key，零配置即可运行
+- 新增相关配置项：`TAVILY_API_KEY`、`SEARCH_MAX_RESULTS`（默认 5）、`SEARCH_TIMEOUT`（默认 10s）
+- 已集成到 `get_default_tools()`，所有新建 Agent 实例自动具备联网搜索能力
+
+#### 🔧 功能完善：`PromptManager` 结构化重构
+- 将原有单一字符串模板拆分为 **5 个独立区段**，结构更清晰、更易维护：
+  - `_IDENTITY_SECTION`：定义 Agent 身份
+  - `_OBJECTIVE_SECTION`：核心目标与输出要求
+  - `_RULES_SECTION`：行为边界与准则
+  - `_BUG_SECTION`：异常与错误处理规则
+  - `_TOOL_FORMAT_SECTION`：工具调用格式规范
+- 新增 `PromptManager.build(identity, objective, extra_rules="")` 工厂类方法，一行代码构建专用 Prompt
+- 新增 Prompt 变更日志（`DEBUG` 级别）：初始化、`set_system()`、`append_system()`、`build()` 均会输出完整 Prompt 内容到控制台和日志文件，方便调试与审查
+
+#### 📄 文档完善
+- `docs/SETUP.md`：
+  - 补充 `PromptManager` 完整使用说明（默认用法 / `build()` / 动态修改 / 日志查看）
+  - 新增 DeepSeek 最小可运行示例（可直接复制运行）
+  - 新增 `web_search` 工具配置与验证说明
+  - 更新模块总览表与文件结构图
+
+---
+
+### 2026-03-10 初版完成
 
 #### 📋 规划阶段
 - 编写 `AI_Agent_计划书.md`，明确项目架构、模型选型、工具体系、MCP 策略、安全策略及输出评估机制
@@ -77,15 +107,15 @@ agent-ai/
 ├── main.py              # 入口
 ├── pyproject.toml       # 依赖配置
 ├── .env.example         # 配置模板
-├── SETUP.md             # 构建与使用详细说明
 ├── AI_Agent_计划书.md   # 项目规划文档
 ├── config/              # 配置与安全策略
-├── core/                # Agent 核心（LLM 客户端 / ReAct 循环）
-├── tools/               # 工具集合
+├── core/                # Agent 核心（LLM 客户端 / ReAct 循环 / Prompt 管理）
+├── tools/               # 工具集合（文件 / 计算 / 数据分析 / 网络搜索）
 ├── security/            # 安全防护
 ├── memory/              # 对话历史
 ├── utils/               # 日志与辅助函数
 ├── tests/               # 单元测试
+├── docs/                # 构建与使用详细说明
 └── benchmarks/          # 测试数据集
 ```
 

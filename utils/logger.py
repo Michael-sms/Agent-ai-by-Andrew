@@ -43,8 +43,8 @@ def get_logger(name: str) -> logging.Logger:
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # 控制台
-    ch = logging.StreamHandler(sys.stdout)
+    # 控制台（使用 stderr，避免干扰 MCP stdio 协议）
+    ch = logging.StreamHandler(sys.stderr)
     ch.setFormatter(fmt)
     ch.addFilter(SensitiveFilter())
     logger.addHandler(ch)

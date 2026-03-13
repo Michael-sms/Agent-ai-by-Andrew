@@ -6,6 +6,34 @@
 
 ## 项目进度
 
+### 2026-03-13 更新（近两日）
+
+#### 🧪 基准测试与评估体系补全
+- 新增测试数据集：`benchmarks/test_cases.yaml`、`benchmarks/edge_cases.yaml`、`benchmarks/regression_suite.yaml`
+- 新增基准运行入口：`benchmarks/run_benchmark.py`，支持按套件/文件运行与结果保存
+- 新增评估模块：`evaluation/evaluator.py`、`evaluation/metrics.py`、`evaluation/reporter.py`
+- 新增依赖：`pyyaml>=6.0`，用于 YAML 测试用例加载
+
+#### 🔌 MCP 能力接入（FastMCP）
+- 新增 `agent_mcp/` 模块：`server.py`、`client.py`、`protocols.py`
+- MCP Server 暴露能力：`health_check`、`list_tools`、`ask_agent`、`calculator`、`file_read`、`file_write`、`data_analysis`、`web_search`
+- 新增连通性脚本：`demo_mcp_client.py`，可一键验证 client 与 server 通信
+- 新增测试：`tests/test_mcp_modules.py`（已通过）
+- 新增文档：`docs/MCP_搭建与运行说明.md`
+
+#### 🛠️ 稳定性与兼容性修复
+- 避免与官方 `mcp` 包重名冲突：本地目录统一为 `agent_mcp`
+- 修复 MCP stdio 通道干扰：`utils/logger.py` 控制台日志改为输出到 `stderr`
+- 修复 FastMCP 返回对象兼容：`agent_mcp/client.py` 对 `CallToolResult` 做统一解析
+- 修复 Windows 关闭阶段告警：`demo_mcp_client.py` 增加事件循环兼容与优雅收尾
+
+#### 🌐 网络搜索后端升级
+- `tools/web_search.py` 从 `Tavily + DuckDuckGo` 调整为 `Tavily + Serper`
+- 新增配置项：`SERPER_API_KEY`（见 `config/settings.py` 与 `.env.example`）
+- 当未配置 `TAVILY_API_KEY` / `SERPER_API_KEY` 时，工具会返回明确错误提示，避免“空结果误判”
+
+---
+
 ### 2026-03-11 更新
 
 #### ✨ 新增功能：网络搜索工具（`tools/web_search.py`）
@@ -13,8 +41,8 @@
 - 典型触发场景：天气查询、最新新闻、实时数据、当前事件等
 - 支持**双后端**，按优先级自动切换：
   - **Tavily Search API**（推荐）：专为 LLM 设计，结果质量高，免费额度注册即得
-  - **DuckDuckGo Instant Answer API**（降级方案）：无需任何 Key，零配置即可运行
-- 新增相关配置项：`TAVILY_API_KEY`、`SEARCH_MAX_RESULTS`（默认 5）、`SEARCH_TIMEOUT`（默认 10s）
+  - **Serper Search API**（备用方案）：基于 Google 搜索结果，覆盖更全
+- 新增相关配置项：`TAVILY_API_KEY`、`SERPER_API_KEY`、`SEARCH_MAX_RESULTS`（默认 5）、`SEARCH_TIMEOUT`（默认 10s）
 - 已集成到 `get_default_tools()`，所有新建 Agent 实例自动具备联网搜索能力
 
 #### 🔧 功能完善：`PromptManager` 结构化重构
@@ -90,6 +118,9 @@ python -m pytest tests/test_core_modules.py -v
 # 4. 启动 Agent
 python main.py          # 交互模式
 python main.py "你的问题"  # 单次提问
+
+# 5. （可选）MCP 连通性验证
+python demo_mcp_client.py
 ```
 
 > 使用 DeepSeek 或其他兼容 OpenAI 格式的 API，在 `.env` 中配置：
@@ -105,21 +136,24 @@ python main.py "你的问题"  # 单次提问
 ```
 agent-ai/
 ├── main.py              # 入口
+├── demo_mcp_client.py   # MCP 连通性验证脚本
 ├── pyproject.toml       # 依赖配置
 ├── .env.example         # 配置模板
 ├── AI_Agent_计划书.md   # 项目规划文档
+├── agent_mcp/           # FastMCP 服务端/客户端
 ├── config/              # 配置与安全策略
 ├── core/                # Agent 核心（LLM 客户端 / ReAct 循环 / Prompt 管理）
 ├── tools/               # 工具集合（文件 / 计算 / 数据分析 / 网络搜索）
 ├── security/            # 安全防护
 ├── memory/              # 对话历史
+├── evaluation/          # 评估模块（评估器/指标/报告）
 ├── utils/               # 日志与辅助函数
 ├── tests/               # 单元测试
 ├── docs/                # 构建与使用详细说明
 └── benchmarks/          # 测试数据集
 ```
 
-详细说明见 [SETUP.md](./SETUP.md)。
+详细说明见 [docs/SETUP.md](./docs/SETUP.md)。
 
 ---
 

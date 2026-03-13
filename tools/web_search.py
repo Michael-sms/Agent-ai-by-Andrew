@@ -1,16 +1,15 @@
 """
 网络搜索工具
 支持两种后端（按优先级自动选择）：
-  1. Tavily Search API  —— 专为 LLM 设计，结果质量高（推荐）
-  2. DuckDuckGo 即时答案 API —— 无需 Key，免费，但结果较简短
+    1. Tavily Search API  —— 专为 LLM 设计，结果质量高（推荐）
+    2. Serper Search API  —— 基于 Google 结果，覆盖更全（推荐备用）
 
 环境变量：
-  TAVILY_API_KEY   填写后自动使用 Tavily；留空则降级到 DuckDuckGo
-  SEARCH_MAX_RESULTS  单次搜索最多返回条目数，默认 5
-  SEARCH_TIMEOUT      请求超时秒数，默认 10
+    TAVILY_API_KEY   填写后优先使用 Tavily
+    SERPER_API_KEY   未填 Tavily 时，自动使用 Serper
+    SEARCH_MAX_RESULTS  单次搜索最多返回条目数，默认 5
+    SEARCH_TIMEOUT      请求超时秒数，默认 10
 """
-import json
-
 import httpx
 
 from config.settings import settings
@@ -50,52 +49,43 @@ def _search_tavily(query: str, max_results: int, timeout: int) -> list[dict]:
     return results
 
 
-# ── DuckDuckGo 后端（无 Key 降级方案）─────────────────────────────────────
+# ── Serper 后端（Google Search API）───────────────────────────────────────
 
-def _search_duckduckgo(query: str, max_results: int, timeout: int) -> list[dict]:
-    """
-    使用 DuckDuckGo Instant Answer API（非官方，仅返回摘要级内容）。
-    适合快速验证流程，生产环境建议换 Tavily。
-    """
-    url = "https://api.duckduckgo.com/"
-    params = {
-        "q": query,
-        "format": "json",
-        "no_html": "1",
-        "skip_disambig": "1",
+def _search_serper(query: str, max_results: int, timeout: int) -> list[dict]:
+    """调用 Serper API，返回搜索结果。"""
+    api_key = settings.SERPER_API_KEY
+    url = "https://google.serper.dev/search"
+    headers = {
+        "X-API-KEY": api_key,
+        "Content-Type": "application/json",
     }
-    resp = httpx.get(url, params=params, timeout=timeout,
-                     headers={"User-Agent": "agent-ai/0.1 (learning project)"})
+    payload = {
+        "q": query,
+        "num": max_results,
+        "hl": "zh-cn",
+        "gl": "cn",
+    }
+    resp = httpx.post(url, headers=headers, json=payload, timeout=timeout)
     resp.raise_for_status()
     data = resp.json()
 
     results: list[dict] = []
 
-    # AbstractText：最主要的摘要
-    if data.get("AbstractText"):
+    # answerBox：直接答案
+    answer_box = data.get("answerBox") or {}
+    if answer_box.get("answer"):
         results.append({
-            "title": data.get("Heading", "摘要"),
-            "url": data.get("AbstractURL", ""),
-            "snippet": data["AbstractText"],
+            "title": answer_box.get("title", "即时答案"),
+            "url": answer_box.get("link", ""),
+            "snippet": str(answer_box.get("answer", "")),
         })
 
-    # RelatedTopics：相关条目
-    for topic in data.get("RelatedTopics", [])[:max_results]:
-        if isinstance(topic, dict) and topic.get("Text"):
-            results.append({
-                "title": topic.get("Text", "")[:60],
-                "url": topic.get("FirstURL", ""),
-                "snippet": topic.get("Text", ""),
-            })
-        if len(results) >= max_results:
-            break
-
-    # Answer：即时答案（如汇率、时间等）
-    if data.get("Answer") and len(results) < max_results:
-        results.insert(0, {
-            "title": "即时答案",
-            "url": "",
-            "snippet": data["Answer"],
+    # organic：常规搜索结果
+    for item in data.get("organic", [])[:max_results]:
+        results.append({
+            "title": item.get("title", ""),
+            "url": item.get("link", ""),
+            "snippet": item.get("snippet", ""),
         })
 
     return results
@@ -107,7 +97,7 @@ class WebSearchTool(BaseTool):
     """
     网络搜索工具。
     - 有 TAVILY_API_KEY → 使用 Tavily（质量更高）
-    - 无 Key → 自动降级到 DuckDuckGo Instant Answer API
+    - 未配置 Tavily 时，若有 SERPER_API_KEY → 使用 Serper（覆盖更全）
     Agent 会根据用户问题自行判断是否需要调用此工具，
     典型场景：天气查询、最新新闻、实时数据等需要联网获取的问题。
     """
@@ -140,7 +130,7 @@ class WebSearchTool(BaseTool):
 
         logger.info(
             "网络搜索 | 后端=%s | query=%r | max_results=%d",
-            "tavily" if settings.TAVILY_API_KEY else "duckduckgo",
+            "tavily" if settings.TAVILY_API_KEY else ("serper" if settings.SERPER_API_KEY else "none"),
             query,
             max_results,
         )
@@ -148,8 +138,15 @@ class WebSearchTool(BaseTool):
         try:
             if settings.TAVILY_API_KEY:
                 results = _search_tavily(query, max_results, timeout)
+            elif settings.SERPER_API_KEY:
+                results = _search_serper(query, max_results, timeout)
             else:
-                results = _search_duckduckgo(query, max_results, timeout)
+                return ToolResult(
+                    success=False,
+                    output=None,
+                    error="未配置搜索 API Key。请在 .env 中设置 TAVILY_API_KEY 或 SERPER_API_KEY。",
+                    tool_name=self.name,
+                )
         except httpx.TimeoutException:
             return ToolResult(
                 success=False, output=None,

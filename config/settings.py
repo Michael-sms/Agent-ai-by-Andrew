@@ -34,7 +34,8 @@ class Settings:
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
     # ── 网络搜索 ───────────────────────────────────────────
-    TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")          # 留空则降级为 DuckDuckGo
+    TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
+    SERPER_API_KEY: str = os.getenv("SERPER_API_KEY", "")
     SEARCH_MAX_RESULTS: int = int(os.getenv("SEARCH_MAX_RESULTS", "5"))
     SEARCH_TIMEOUT: int = int(os.getenv("SEARCH_TIMEOUT", "10"))
 

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent AI Chat</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <main id="app" class="app">
+    <header class="topbar">
+      <h1>Agent AI</h1>
+      <button id="newChatBtn" class="ghost-btn" type="button">新对话</button>
+    </header>
+
+    <section id="messages" class="messages" aria-live="polite"></section>
+
+    <section id="emptyState" class="empty-state">
+      <h2>今天想聊点什么？</h2>
+      <p>支持文件处理、计算、数据分析、联网搜索等能力。</p>
+    </section>
+
+    <section id="composerShell" class="composer-shell">
+      <form id="chatForm" class="composer" autocomplete="off">
+        <textarea
+          id="messageInput"
+          rows="1"
+          maxlength="8000"
+          placeholder="输入你的问题，回车发送（Shift+Enter 换行）"
+          required
+        ></textarea>
+        <button id="sendBtn" type="submit">发送</button>
+      </form>
+      <p id="statusText" class="status-text"></p>
+    </section>
+  </main>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>

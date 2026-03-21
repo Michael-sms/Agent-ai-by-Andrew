@@ -6,6 +6,35 @@
 
 ## 项目进度
 
+### 2026-03-21 更新（近期）
+
+#### 💬 Web 聊天前端上线（ChatGPT/Gemini 风格）
+- 新增 `webapp/` 模块：
+  - `webapp/server.py`：FastAPI 服务入口
+  - `webapp/static/index.html`：页面结构
+  - `webapp/static/styles.css`：聊天 UI 样式
+  - `webapp/static/app.js`：前端交互逻辑
+- 新增 Web API：
+  - `GET /api/health`：服务健康检查
+  - `POST /api/chat`：向 Agent 发起问答
+  - `POST /api/reset`：重置会话记忆
+- 对话体验对齐需求：
+  - 无有效聊天时，输入框垂直居中
+  - 有聊天内容后，输入框自动切换到底部居中
+  - 支持回车发送、`Shift+Enter` 换行、"新对话" 重置
+
+#### 📝 LLM Markdown 输出渲染修复
+- 修复问题：前端无法正确渲染 LLM 返回的 Markdown（如 `**加粗**`、列表、代码块）
+- 实现方式：在 `webapp/static/app.js` 增加安全渲染流程（先转义后解析）
+- 当前支持：标题、无序/有序列表、粗体/斜体、行内代码、代码块、链接
+- 样式增强：在 `webapp/static/styles.css` 新增 `.message.markdown` 相关排版样式
+
+#### 📦 依赖更新
+- `pyproject.toml` 新增：`fastapi>=0.115.0`、`uvicorn>=0.30.0`
+- `uv.lock` 已同步更新对应依赖解析结果
+
+---
+
 ### 2026-03-13 更新（近两日）
 
 #### 🧪 基准测试与评估体系补全
@@ -121,7 +150,16 @@ python main.py "你的问题"  # 单次提问
 
 # 5. （可选）MCP 连通性验证
 python demo_mcp_client.py
+
+# 6. （可选）启动 Web 聊天前端
+python -m webapp.server
+# 浏览器访问 http://127.0.0.1:8000
 ```
+
+> Web 前端交互说明：
+> - 初始无有效聊天时，输入框垂直居中。
+> - 产生聊天内容后，输入框自动切换到底部居中。
+> - 点击“新对话”会清空前端消息并重置后端对话记忆。
 
 > 使用 DeepSeek 或其他兼容 OpenAI 格式的 API，在 `.env` 中配置：
 > ```
@@ -141,6 +179,7 @@ agent-ai/
 ├── .env.example         # 配置模板
 ├── AI_Agent_计划书.md   # 项目规划文档
 ├── agent_mcp/           # FastMCP 服务端/客户端
+├── webapp/              # Web 聊天前端与服务
 ├── config/              # 配置与安全策略
 ├── core/                # Agent 核心（LLM 客户端 / ReAct 循环 / Prompt 管理）
 ├── tools/               # 工具集合（文件 / 计算 / 数据分析 / 网络搜索）

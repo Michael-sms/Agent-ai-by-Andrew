@@ -31,3 +31,6 @@ Thumbs.db
 data/
 outputs/
 logs/
+
+# Web UI session persistence
+data/web_sessions/

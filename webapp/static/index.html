@@ -8,30 +8,49 @@
 </head>
 <body>
   <main id="app" class="app">
-    <header class="topbar">
-      <h1>Agent AI</h1>
-      <button id="newChatBtn" class="ghost-btn" type="button">新对话</button>
-    </header>
+    <aside class="sidebar">
+      <div class="brand">Agent AI</div>
+      <button id="newChatBtn" class="new-chat-btn" type="button">＋ 开启新对话</button>
+      <div id="sessionGroups" class="session-groups" aria-label="历史会话列表"></div>
+    </aside>
 
-    <section id="messages" class="messages" aria-live="polite"></section>
+    <section id="chatMain" class="chat-main">
+      <header class="topbar">
+        <h1 id="sessionTitle">新对话</h1>
+        <div class="actions">
+          <label class="theme-select-wrap" for="themeSelect">
+            <span>主题</span>
+            <select id="themeSelect" aria-label="主题模式">
+              <option value="system">跟随系统</option>
+              <option value="light">日间</option>
+              <option value="dark">夜间</option>
+            </select>
+          </label>
+          <button id="renameBtn" class="ghost-btn" type="button">重命名</button>
+          <button id="deleteBtn" class="ghost-btn danger" type="button">删除</button>
+        </div>
+      </header>
 
-    <section id="emptyState" class="empty-state">
-      <h2>今天想聊点什么？</h2>
-      <p>支持文件处理、计算、数据分析、联网搜索等能力。</p>
-    </section>
+      <section id="messages" class="messages" aria-live="polite"></section>
 
-    <section id="composerShell" class="composer-shell">
-      <form id="chatForm" class="composer" autocomplete="off">
-        <textarea
-          id="messageInput"
-          rows="1"
-          maxlength="8000"
-          placeholder="输入你的问题，回车发送（Shift+Enter 换行）"
-          required
-        ></textarea>
-        <button id="sendBtn" type="submit">发送</button>
-      </form>
-      <p id="statusText" class="status-text"></p>
+      <section id="emptyState" class="empty-state">
+        <h2>今天想聊点什么？</h2>
+        <p>支持文件处理、计算、数据分析、联网搜索等能力。</p>
+      </section>
+
+      <section id="composerShell" class="composer-shell">
+        <form id="chatForm" class="composer" autocomplete="off">
+          <textarea
+            id="messageInput"
+            rows="1"
+            maxlength="8000"
+            placeholder="输入你的问题，回车发送（Shift+Enter 换行）"
+            required
+          ></textarea>
+          <button id="sendBtn" type="submit">发送</button>
+        </form>
+        <p id="statusText" class="status-text"></p>
+      </section>
     </section>
   </main>
 

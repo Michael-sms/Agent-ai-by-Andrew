@@ -6,6 +6,19 @@
 
 ## 项目进度
 
+### 2026-04-08 更新（前端体验增强）
+
+#### 🎨 主题模式（三态）
+- Web 前端新增主题切换：`日间` / `夜间` / `跟随系统`
+- 用户选择会持久化保存（`localStorage`），刷新页面后保留主题偏好
+- 当选择“跟随系统”时，系统深浅色变化会自动同步到页面
+- 相关改动：
+  - `webapp/static/index.html`：新增主题下拉控件
+  - `webapp/static/app.js`：新增主题状态与系统监听逻辑
+  - `webapp/static/styles.css`：新增 `:root[data-theme="light"]` 主题变量
+
+---
+
 ### 2026-03-21 更新（近期）
 
 #### 💬 Web 聊天前端上线（ChatGPT/Gemini 风格）
@@ -22,6 +35,18 @@
   - 无有效聊天时，输入框垂直居中
   - 有聊天内容后，输入框自动切换到底部居中
   - 支持回车发送、`Shift+Enter` 换行、"新对话" 重置
+
+#### 🧭 会话历史侧边栏（DeepSeek 风格）
+- 左侧新增会话历史栏，支持按时间分组展示（`30 天内` / `YYYY-MM`）
+- 支持会话级操作：新建、切换、重命名、删除
+- 会话与消息持久化：本地保存到 `data/web_sessions/sessions.json`
+- 新增后端接口：
+  - `GET /api/sessions`：会话列表
+  - `POST /api/sessions`：创建会话
+  - `GET /api/sessions/{id}`：读取会话详情
+  - `PATCH /api/sessions/{id}`：重命名会话
+  - `DELETE /api/sessions/{id}`：删除会话
+  - `POST /api/sessions/{id}/reset`：清空会话消息
 
 #### 📝 LLM Markdown 输出渲染修复
 - 修复问题：前端无法正确渲染 LLM 返回的 Markdown（如 `**加粗**`、列表、代码块）

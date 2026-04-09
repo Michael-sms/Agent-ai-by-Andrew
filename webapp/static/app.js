@@ -30,16 +30,43 @@ function applyTheme(mode, persist = true) {
   themeMode = ["light", "dark", "system"].includes(mode) ? mode : "system";
   const resolved = resolveTheme(themeMode);
   document.documentElement.setAttribute("data-theme", resolved);
+  document.documentElement.classList.remove("theme-light", "theme-dark");
+  document.documentElement.classList.add(`theme-${resolved}`);
+  if (document.body) {
+    document.body.setAttribute("data-theme", resolved);
+    document.body.classList.remove("theme-light", "theme-dark");
+    document.body.classList.add(`theme-${resolved}`);
+  }
   if (themeSelect) {
     themeSelect.value = themeMode;
   }
   if (persist) {
-    window.localStorage.setItem(THEME_KEY, themeMode);
+    try {
+      window.localStorage.setItem(THEME_KEY, themeMode);
+    } catch (_) {
+    }
+  }
+
+  if (resolved === "light") {
+    const lightBg = "linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%)";
+    document.documentElement.style.background = lightBg;
+    if (document.body) {
+      document.body.style.background = lightBg;
+    }
+  } else {
+    document.documentElement.style.background = "";
+    if (document.body) {
+      document.body.style.background = "";
+    }
   }
 }
 
 function loadThemeMode() {
-  const saved = window.localStorage.getItem(THEME_KEY);
+  let saved = null;
+  try {
+    saved = window.localStorage.getItem(THEME_KEY);
+  } catch (_) {
+  }
   if (saved === "light" || saved === "dark" || saved === "system") {
     return saved;
   }
@@ -275,7 +302,8 @@ function renderSessionList() {
 async function reloadSessions() {
   const data = await api("/api/sessions");
   sessions = Array.isArray(data.sessions) ? data.sessions : [];
-  if (!currentSessionId) {
+  const currentExists = sessions.some((item) => item.id === currentSessionId);
+  if (!currentSessionId || !currentExists) {
     currentSessionId = data.active_session_id || (sessions[0] && sessions[0].id) || "";
   }
   renderSessionList();
@@ -285,12 +313,16 @@ async function switchSession(sessionId) {
   if (!sessionId) {
     return;
   }
-  const session = await api(`/api/sessions/${sessionId}`);
-  currentSessionId = session.id;
-  sessionTitleNode.textContent = session.title || "新对话";
-  renderMessages(session);
-  await reloadSessions();
-  input.focus();
+  try {
+    const session = await api(`/api/sessions/${sessionId}`);
+    currentSessionId = session.id;
+    sessionTitleNode.textContent = session.title || "新对话";
+    renderMessages(session);
+    await reloadSessions();
+    input.focus();
+  } catch (error) {
+    setStatus(`切换会话失败：${error.message}`);
+  }
 }
 
 async function createSession() {
@@ -298,11 +330,25 @@ async function createSession() {
     method: "POST",
     body: JSON.stringify({ title: "新对话" }),
   });
+  await reloadSessions();
   await switchSession(created.id);
   setStatus("已创建新对话");
 }
 
 async function renameCurrentSession() {
+  if (!currentSessionId) {
+    await reloadSessions();
+    if (!currentSessionId) {
+      setStatus("当前没有可重命名会话");
+      return;
+    }
+  }
+
+  const currentExists = sessions.some((item) => item.id === currentSessionId);
+  if (!currentExists) {
+    await reloadSessions();
+  }
+
   if (!currentSessionId) {
     return;
   }

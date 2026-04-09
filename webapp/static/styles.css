@@ -1,7 +1,9 @@
 :root {
   color-scheme: dark;
   --bg: #0d1016;
+  --bg-top: #141a2a;
   --sidebar: #14171f;
+  --sidebar-top: #151a24;
   --panel: #171b24;
   --panel-2: #1f2530;
   --text: #ebefff;
@@ -15,12 +17,25 @@
   --new-chat-bg: #3a3f49;
   --new-chat-text: #f0f2f8;
   --send-btn-text: #0a1228;
+  --brand-color: #7297ff;
+  --session-hover-bg: #1f2634;
+  --session-active-bg: #212d45;
+  --session-active-border: #2d4472;
+  --inline-code-bg: rgba(255, 255, 255, 0.08);
+  --inline-code-border: rgba(255, 255, 255, 0.12);
+  --block-code-bg: rgba(0, 0, 0, 0.26);
+  --link-color: #8fc2ff;
 }
 
-:root[data-theme="light"] {
+:root[data-theme="light"],
+html.theme-light,
+body[data-theme="light"],
+body.theme-light {
   color-scheme: light;
   --bg: #f3f6fb;
+  --bg-top: #ffffff;
   --sidebar: #ebf0f8;
+  --sidebar-top: #f6f9ff;
   --panel: #ffffff;
   --panel-2: #f5f8ff;
   --text: #1f2a3d;
@@ -34,6 +49,22 @@
   --new-chat-bg: #eef3ff;
   --new-chat-text: #243554;
   --send-btn-text: #ffffff;
+  --brand-color: #3f74ff;
+  --session-hover-bg: #eef4ff;
+  --session-active-bg: #dfeaff;
+  --session-active-border: #b6ccff;
+  --inline-code-bg: rgba(41, 82, 160, 0.12);
+  --inline-code-border: rgba(41, 82, 160, 0.22);
+  --block-code-bg: rgba(41, 82, 160, 0.08);
+  --link-color: #2f67ee;
+}
+
+body.theme-light {
+  color-scheme: light;
+}
+
+body.theme-dark {
+  color-scheme: dark;
 }
 
 * {
@@ -46,8 +77,15 @@ body {
   width: 100%;
   height: 100%;
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-  background: radial-gradient(circle at top, #141a2a 0, var(--bg) 58%);
+  background: radial-gradient(circle at top, var(--bg-top) 0, var(--bg) 58%);
   color: var(--text);
+}
+
+html.theme-light,
+html.theme-light body,
+body.theme-light,
+body[data-theme="light"] {
+  background: linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%);
 }
 
 .app {
@@ -58,7 +96,7 @@ body {
 .sidebar {
   width: 280px;
   border-right: 1px solid var(--border);
-  background: linear-gradient(180deg, #151a24 0%, var(--sidebar) 100%);
+  background: linear-gradient(180deg, var(--sidebar-top) 0%, var(--sidebar) 100%);
   padding: 14px 12px;
   display: flex;
   flex-direction: column;
@@ -69,7 +107,7 @@ body {
   font-size: 30px;
   font-weight: 700;
   line-height: 1;
-  color: #7297ff;
+  color: var(--brand-color);
 }
 
 .new-chat-btn {
@@ -108,12 +146,12 @@ body {
 }
 
 .session-item:hover {
-  background: #1f2634;
+  background: var(--session-hover-bg);
 }
 
 .session-item.active {
-  background: #212d45;
-  border-color: #2d4472;
+  background: var(--session-active-bg);
+  border-color: var(--session-active-border);
 }
 
 .session-item-title {
@@ -265,8 +303,8 @@ body {
 }
 
 .message.markdown code {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--inline-code-bg);
+  border: 1px solid var(--inline-code-border);
   border-radius: 6px;
   padding: 1px 5px;
   font-family: Consolas, "Courier New", monospace;
@@ -274,7 +312,7 @@ body {
 }
 
 .message.markdown pre {
-  background: rgba(0, 0, 0, 0.26);
+  background: var(--block-code-bg);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px;
@@ -289,7 +327,7 @@ body {
 }
 
 .message.markdown a {
-  color: #8fc2ff;
+  color: var(--link-color);
   text-decoration: underline;
 }
 

@@ -4,278 +4,237 @@
 
 ---
 
-## 项目进度
+## 项目简介
 
-### 2026-04-09 更新（Web 侧问题修复）
+`Agent-ai-by-Andrew` 是一个面向学习与工程实践的 AI Agent 项目，支持 ReAct 推理、工具调用、安全边界控制、评测体系、MCP 接入，以及可直接使用的 Web 聊天界面。
 
-#### 🧩 主题切换失效修复（重点）
-- 修复现象：选择 `日间/夜间` 后页面视觉无明显变化
-- 修复措施：
-  - `webapp/static/app.js`：主题应用时同时同步 `html/body` 的 `data-theme` 与 `theme-light/theme-dark` class
-  - `webapp/static/styles.css`：增强 light 主题选择器覆盖范围（兼容 `:root`、`html`、`body` 多种命中）
-  - 在 light 模式下增加页面级浅色背景兜底，确保非夜间模式时为浅色页面
-- 附加优化：对 `localStorage` 读写增加容错，避免浏览器限制导致主题逻辑中断
-
-#### 🗂️ 会话管理可用性修复
-- 修复当前会话重命名偶发无效问题：在前端增加 `currentSessionId` 有效性检查与自动回退
-- 修复新建会话后历史列表显示异常：创建后先刷新会话列表，再切换到新会话
-- 修复会话切换失败静默问题：新增状态提示，便于定位接口异常
-
-#### 🚀 前端资源缓存问题处理
-- `webapp/static/index.html` 为静态资源增加版本参数（`styles.css` / `app.js`）
-- 避免浏览器命中旧缓存导致“代码已更新但页面无变化”的假象
-
----
-
-### 2026-04-08 更新（前端体验增强）
-
-#### 🎨 主题模式（三态）
-- Web 前端新增主题切换：`日间` / `夜间` / `跟随系统`
-- 用户选择会持久化保存（`localStorage`），刷新页面后保留主题偏好
-- 当选择“跟随系统”时，系统深浅色变化会自动同步到页面
-- 相关改动：
-  - `webapp/static/index.html`：新增主题下拉控件
-  - `webapp/static/app.js`：新增主题状态与系统监听逻辑
-  - `webapp/static/styles.css`：新增 `:root[data-theme="light"]` 主题变量
-
----
-
-### 2026-03-21 更新（近期）
-
-#### 💬 Web 聊天前端上线（ChatGPT/Gemini 风格）
-- 新增 `webapp/` 模块：
-  - `webapp/server.py`：FastAPI 服务入口
-  - `webapp/static/index.html`：页面结构
-  - `webapp/static/styles.css`：聊天 UI 样式
-  - `webapp/static/app.js`：前端交互逻辑
-- 新增 Web API：
-  - `GET /api/health`：服务健康检查
-  - `POST /api/chat`：向 Agent 发起问答
-  - `POST /api/reset`：重置会话记忆
-- 对话体验对齐需求：
-  - 无有效聊天时，输入框垂直居中
-  - 有聊天内容后，输入框自动切换到底部居中
-  - 支持回车发送、`Shift+Enter` 换行、"新对话" 重置
-
-#### 🧭 会话历史侧边栏（DeepSeek 风格）
-- 左侧新增会话历史栏，支持按时间分组展示（`30 天内` / `YYYY-MM`）
-- 支持会话级操作：新建、切换、重命名、删除
-- 会话与消息持久化：本地保存到 `data/web_sessions/sessions.json`
-- 新增后端接口：
-  - `GET /api/sessions`：会话列表
-  - `POST /api/sessions`：创建会话
-  - `GET /api/sessions/{id}`：读取会话详情
-  - `PATCH /api/sessions/{id}`：重命名会话
-  - `DELETE /api/sessions/{id}`：删除会话
-  - `POST /api/sessions/{id}/reset`：清空会话消息
-
-#### 📝 LLM Markdown 输出渲染修复
-- 修复问题：前端无法正确渲染 LLM 返回的 Markdown（如 `**加粗**`、列表、代码块）
-- 实现方式：在 `webapp/static/app.js` 增加安全渲染流程（先转义后解析）
-- 当前支持：标题、无序/有序列表、粗体/斜体、行内代码、代码块、链接
-- 样式增强：在 `webapp/static/styles.css` 新增 `.message.markdown` 相关排版样式
-
-#### 📦 依赖更新
-- `pyproject.toml` 新增：`fastapi>=0.115.0`、`uvicorn>=0.30.0`
-- `uv.lock` 已同步更新对应依赖解析结果
-
----
-
-### 2026-03-13 更新（近两日）
-
-#### 🧪 基准测试与评估体系补全
-- 新增测试数据集：`benchmarks/test_cases.yaml`、`benchmarks/edge_cases.yaml`、`benchmarks/regression_suite.yaml`
-- 新增基准运行入口：`benchmarks/run_benchmark.py`，支持按套件/文件运行与结果保存
-- 新增评估模块：`evaluation/evaluator.py`、`evaluation/metrics.py`、`evaluation/reporter.py`
-- 新增依赖：`pyyaml>=6.0`，用于 YAML 测试用例加载
-
-#### 🔌 MCP 能力接入（FastMCP）
-- 新增 `agent_mcp/` 模块：`server.py`、`client.py`、`protocols.py`
-- MCP Server 暴露能力：`health_check`、`list_tools`、`ask_agent`、`calculator`、`file_read`、`file_write`、`data_analysis`、`web_search`
-- 新增连通性脚本：`demo_mcp_client.py`，可一键验证 client 与 server 通信
-- 新增测试：`tests/test_mcp_modules.py`（已通过）
-- 新增文档：`docs/MCP_搭建与运行说明.md`
-
-#### 🛠️ 稳定性与兼容性修复
-- 避免与官方 `mcp` 包重名冲突：本地目录统一为 `agent_mcp`
-- 修复 MCP stdio 通道干扰：`utils/logger.py` 控制台日志改为输出到 `stderr`
-- 修复 FastMCP 返回对象兼容：`agent_mcp/client.py` 对 `CallToolResult` 做统一解析
-- 修复 Windows 关闭阶段告警：`demo_mcp_client.py` 增加事件循环兼容与优雅收尾
-
-#### 🌐 网络搜索后端升级
-- `tools/web_search.py` 从 `Tavily + DuckDuckGo` 调整为 `Tavily + Serper`
-- 新增配置项：`SERPER_API_KEY`（见 `config/settings.py` 与 `.env.example`）
-- 当未配置 `TAVILY_API_KEY` / `SERPER_API_KEY` 时，工具会返回明确错误提示，避免“空结果误判”
-
----
-
-### 2026-03-11 更新
-
-#### ✨ 新增功能：网络搜索工具（`tools/web_search.py`）
-- 新增 `WebSearchTool`，Agent 可根据问题语义**自动判断**是否需要联网搜索，无需用户手动指定
-- 典型触发场景：天气查询、最新新闻、实时数据、当前事件等
-- 支持**双后端**，按优先级自动切换：
-  - **Tavily Search API**（推荐）：专为 LLM 设计，结果质量高，免费额度注册即得
-  - **Serper Search API**（备用方案）：基于 Google 搜索结果，覆盖更全
-- 新增相关配置项：`TAVILY_API_KEY`、`SERPER_API_KEY`、`SEARCH_MAX_RESULTS`（默认 5）、`SEARCH_TIMEOUT`（默认 10s）
-- 已集成到 `get_default_tools()`，所有新建 Agent 实例自动具备联网搜索能力
-
-#### 🔧 功能完善：`PromptManager` 结构化重构
-- 将原有单一字符串模板拆分为 **5 个独立区段**，结构更清晰、更易维护：
-  - `_IDENTITY_SECTION`：定义 Agent 身份
-  - `_OBJECTIVE_SECTION`：核心目标与输出要求
-  - `_RULES_SECTION`：行为边界与准则
-  - `_BUG_SECTION`：异常与错误处理规则
-  - `_TOOL_FORMAT_SECTION`：工具调用格式规范
-- 新增 `PromptManager.build(identity, objective, extra_rules="")` 工厂类方法，一行代码构建专用 Prompt
-- 新增 Prompt 变更日志（`DEBUG` 级别）：初始化、`set_system()`、`append_system()`、`build()` 均会输出完整 Prompt 内容到控制台和日志文件，方便调试与审查
-
-#### 📄 文档完善
-- `docs/SETUP.md`：
-  - 补充 `PromptManager` 完整使用说明（默认用法 / `build()` / 动态修改 / 日志查看）
-  - 新增 DeepSeek 最小可运行示例（可直接复制运行）
-  - 新增 `web_search` 工具配置与验证说明
-  - 更新模块总览表与文件结构图
-
----
-
-### 2026-03-10 初版完成
-
-#### 📋 规划阶段
-- 编写 `AI_Agent_计划书.md`，明确项目架构、模型选型、工具体系、MCP 策略、安全策略及输出评估机制
-
-#### 🏗️ 核心模块搭建
-从零搭建以下模块，Python 版本 3.10.19，包管理工具 uv：
-
-| 模块 | 文件 | 说明 |
-|------|------|------|
-| **配置层** | `config/settings.py` | 从 `.env` 加载全局配置（模型、路径、Token 上限等）|
-| | `config/security.py` | 文件路径白名单、工具访问权限控制 |
-| **工具层** | `tools/base_tool.py` | 工具抽象基类，自动导出 OpenAI function schema |
-| | `tools/file_operations.py` | 文件读写，强制路径白名单校验 |
-| | `tools/calculator.py` | 基于 AST 的安全数学表达式求值（拒绝 `__import__` 等危险语法）|
-| | `tools/data_analysis.py` | Pandas CSV 数据分析（describe/sort/groupby 等）|
-| **安全层** | `security/secrets_filter.py` | 正则过滤 API Key、JWT、Bearer Token 等敏感信息 |
-| | `security/sanitizer.py` | Prompt Injection 检测、超长输入截断 |
-| | `security/validator.py` | 参数类型校验、路径穿越（`..`）拦截 |
-| **记忆层** | `memory/conversation.py` | 滑动窗口对话历史，支持原始 dict 消息存储 |
-| **核心层** | `core/llm_client.py` | OpenAI ChatCompletion 封装，记录 Token 消耗与延迟 |
-| | `core/prompt_manager.py` | 系统 Prompt 模板管理 |
-| | `core/agent.py` | **ReAct 主循环**（Reasoning + Acting），逐步记录执行轨迹 |
-| **工具层** | `utils/logger.py` | 统一日志格式 + 自动脱敏过滤器 |
-| | `utils/helpers.py` | 截断、安全 JSON 解析等辅助函数 |
-| **测试** | `tests/test_core_modules.py` | 25 个本地单元测试，无需 API Key 即可运行 |
-| **入口** | `main.py` | 支持交互模式与单次提问两种运行方式 |
-
-#### 🐛 Bug 修复
-- **修复 DeepSeek/OpenAI tool call 消息格式错误**：原代码将含 `tool_calls` 的 assistant 消息错误地序列化为 JSON 字符串存入 content，导致 `tool` 角色消息找不到对应的 `tool_calls` 前置消息，API 报 400 错误。
-  - `memory/conversation.py`：新增 `add_raw()` 方法，支持原始 dict 消息直接入队
-  - `core/agent.py`：assistant + tool 消息均改用 `add_raw()` 写入，保证协议格式完整
-
-#### 📦 依赖修复
-- `pandas` 版本从 `>=2.3.3` 降级为 `>=2.2.0,<2.3.0`（pandas 2.3.x 最低要求 Python 3.11，当前环境为 3.10）
-
----
-
-## 快速开始
-
-```powershell
-# 1. 安装依赖
-uv sync
-
-# 2. 配置 API Key
-Copy-Item .env.example .env
-# 编辑 .env，填入 OPENAI_API_KEY=sk-...
-
-# 3. 运行测试（无需 API Key）
-python -m pytest tests/test_core_modules.py -v
-
-# 4. 启动 Agent
-python main.py          # 交互模式
-python main.py "你的问题"  # 单次提问
-
-# 5. （可选）MCP 连通性验证
-python demo_mcp_client.py
-
-# 6. （可选）启动 Web 聊天前端
-python -m webapp.server
-# 浏览器访问 http://127.0.0.1:8000
-```
-
-> Web 前端交互说明：
-> - 初始无有效聊天时，输入框垂直居中。
-> - 产生聊天内容后，输入框自动切换到底部居中。
-> - 点击“新对话”会清空前端消息并重置后端对话记忆。
-
-> 使用 DeepSeek 或其他兼容 OpenAI 格式的 API，在 `.env` 中配置：
-> ```
-> OPENAI_BASE_URL=https://api.deepseek.com/v1
-> DEFAULT_MODEL=deepseek-chat
-> ```
+项目核心目标：构建一个“可运行、可扩展、可评估”的 Agent 原型系统。
 
 ---
 
 ## 项目结构
 
-```
+```text
 agent-ai/
-├── main.py              # 入口
-├── demo_mcp_client.py   # MCP 连通性验证脚本
-├── pyproject.toml       # 依赖配置
-├── .env.example         # 配置模板
-├── AI_Agent_计划书.md   # 项目规划文档
-├── agent_mcp/           # FastMCP 服务端/客户端
-├── webapp/              # Web 聊天前端与服务
-├── config/              # 配置与安全策略
-├── core/                # Agent 核心（LLM 客户端 / ReAct 循环 / Prompt 管理）
-├── tools/               # 工具集合（文件 / 计算 / 数据分析 / 网络搜索）
-├── security/            # 安全防护
-├── memory/              # 对话历史
-├── evaluation/          # 评估模块（评估器/指标/报告）
-├── utils/               # 日志与辅助函数
-├── tests/               # 单元测试
-├── docs/                # 构建与使用详细说明
-└── benchmarks/          # 测试数据集
+├── main.py                    # CLI 入口（交互模式 / 单次提问）
+├── pyproject.toml             # 依赖与项目配置
+├── .env.example               # 环境变量模板
+├── agent_mcp/                 # FastMCP 模块（server/client/protocols）
+├── webapp/                    # Web UI（FastAPI + 静态前端）
+│   ├── server.py
+│   ├── session_store.py
+│   └── static/
+├── core/                      # Agent 核心（ReAct、LLM 客户端、Prompt 管理）
+├── tools/                     # 工具层（文件、计算、数据分析、联网搜索）
+├── security/                  # 输入输出安全、敏感信息过滤、参数校验
+├── memory/                    # 对话记忆
+├── config/                    # 全局配置与安全配置
+├── benchmarks/                # 测试数据集
+├── evaluation/                # 评估器、指标、报告
+├── tests/                     # 单元测试
+├── docs/                      # 详细文档
+├── data/                      # 本地数据（含 Web 会话存储）
+├── logs/                      # 运行日志
+└── outputs/                   # 输出目录
 ```
 
-详细说明见 [docs/SETUP.md](./docs/SETUP.md)。
+---
+
+## 项目实现功能
+
+### 1) Agent 核心能力
+- ReAct 循环（Reasoning + Acting）
+- OpenAI 兼容模型调用（支持 DeepSeek 等 OpenAI 格式接口）
+- 多轮对话记忆管理
+- 工具自动选择与调用
+
+### 2) 工具能力
+- 文件读写（路径白名单限制）
+- 安全计算器（AST 安全求值）
+- CSV 数据分析（`describe` / `sort` / `groupby`）
+- 网络搜索（Tavily 优先，Serper 备选）
+
+### 3) MCP 能力（FastMCP）
+- `health_check`、`list_tools`
+- `ask_agent`
+- `calculator`、`file_read`、`file_write`、`data_analysis`、`web_search`
+
+### 4) Web 前端能力
+- ChatGPT/Gemini 风格聊天页面
+- DeepSeek 风格会话历史侧边栏
+- 会话新建/切换/重命名/删除
+- LLM Markdown 输出渲染（标题、列表、粗斜体、代码、链接）
+- 主题三态切换：`日间` / `夜间` / `跟随系统`
+
+### 5) 评测能力
+- 基准数据集（功能、边界、回归）
+- 评估器与指标聚合
+- 报告输出
+
+---
+
+## 安装依赖
+
+### 环境要求
+- Python `>=3.10`
+- 推荐使用 `uv`
+
+### 方式一（推荐：uv）
+
+```powershell
+cd "c:\your projects catalog\agent-ai"
+uv sync
+```
+
+### 方式二（pip）
+
+```powershell
+cd "c:\your projects catalog\agent-ai"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e .
+```
+
+---
+
+## 技术栈
+
+- **语言**：Python 3.10+
+- **后端框架**：FastAPI、Uvicorn
+- **MCP**：FastMCP
+- **LLM SDK**：OpenAI Python SDK（兼容 OpenAI 格式服务）
+- **数据处理**：Pandas、NumPy
+- **配置管理**：python-dotenv、Pydantic
+- **网络请求**：httpx
+- **评测与测试**：PyYAML、pytest、pytest-asyncio
+- **前端**：原生 HTML/CSS/JavaScript（无前端框架）
+
+---
+
+## 快速开始
+
+### 1) 配置环境变量
+
+```powershell
+Copy-Item .env.example .env
+```
+
+在 `.env` 中至少配置：
+
+```env
+OPENAI_API_KEY=sk-xxxx
+OPENAI_BASE_URL=https://api.deepseek.com/v1
+DEFAULT_MODEL=deepseek-chat
+```
+
+如需联网搜索，额外配置：
+
+```env
+TAVILY_API_KEY=tvly-xxxx
+# 或者
+SERPER_API_KEY=xxxx
+```
+
+### 2) CLI 模式
+
+```powershell
+python main.py
+python main.py "帮我总结这个项目的能力"
+```
+
+### 3) 启动 Web 前端
+
+```powershell
+python -m webapp.server
+```
+
+浏览器访问：`http://127.0.0.1:8000`
+
+### 4) MCP 连通性验证
+
+```powershell
+python demo_mcp_client.py
+```
+
+---
+
+## 常见问题
+
+### Q1：Web 页面切主题没有变化
+- 先强制刷新：`Ctrl + F5`
+- 确认页面使用最新静态资源（已附带版本参数）
+- 若仍异常，检查浏览器是否禁用了 `localStorage`
+
+### Q2：`ask_agent` 调用失败，提示 API Key 错误
+- 检查 `.env` 中 `OPENAI_API_KEY` 是否正确
+- 检查 `OPENAI_BASE_URL` 与 `DEFAULT_MODEL` 是否匹配目标服务
+
+### Q3：搜索工具不可用
+- 配置 `TAVILY_API_KEY` 或 `SERPER_API_KEY`
+- 未配置时工具会返回明确错误，不会静默成功
+
+### Q4：MCP 连接失败
+- 先确保依赖已安装：`uv sync`
+- 再运行：`python -m agent_mcp.server`
+- 检查日志输出是否有导入错误或路径错误
+
+### Q5：会话历史不显示或重命名无效
+- 使用最新代码并刷新页面
+- 检查 `data/web_sessions/sessions.json` 是否可读写
+
+---
+
+## 更新日志
+
+### 2026-04-09
+- 修复主题切换无视觉变化问题（强化 `html/body` 主题标记与浅色背景兜底）
+- 修复会话重命名偶发无效与会话列表刷新异常
+- 增加静态资源版本参数，规避浏览器缓存导致的旧代码问题
+
+### 2026-04-08
+- 新增主题三态切换：日间 / 夜间 / 跟随系统
+- 前端主题偏好持久化与系统主题联动
+
+### 2026-03-21
+- 上线 Web 聊天前端（FastAPI + 原生前端）
+- 新增 DeepSeek 风格会话历史侧边栏与会话持久化
+- 修复 LLM Markdown 渲染问题
+
+### 2026-03-13
+- 补全 Benchmark 数据集与评估模块
+- 完成 FastMCP 接入与联调
+- 搜索后端切换为 Tavily + Serper
 
 ---
 
 ## 提交 Issue
 
-欢迎通过 Issue 反馈问题、建议或讨论！提交前请确认以下事项：
+欢迎提交问题与建议：
 
-**Bug 报告请包含：**
-- Python 版本与操作系统
-- 复现步骤（最小可复现代码或操作流程）
-- 报错信息完整截图或日志（注意**脱敏处理**，不要粘贴 API Key）
-- 期望行为与实际行为的对比
+- **仓库地址**：`https://github.com/Michael-sms/Agent-ai-by-Andrew`
+- **Issue 地址**：`https://github.com/Michael-sms/Agent-ai-by-Andrew/issues`
 
-**功能建议请包含：**
-- 使用场景描述
-- 期望的功能效果
-- 是否愿意参与实现（可选）
+建议模板：
+- 运行环境（OS、Python 版本）
+- 复现步骤（尽量最小化）
+- 实际行为与期望行为
+- 错误日志（请脱敏，勿包含密钥）
 
-**提交地址**：[GitHub Issues](https://github.com/Michael-sms/Agent-ai-by-Andrew/issues)
+---
 
-> ⚠️ 请勿在 Issue 中粘贴任何 API Key、密码或其他敏感信息。
+## 致谢
+
+感谢以下项目/生态提供支持：
+- OpenAI Python SDK 与 OpenAI 兼容生态
+- FastAPI / Uvicorn
+- FastMCP 与 MCP 社区
+- Pandas / NumPy / Pytest 开源社区
+
+也感谢所有提交 Issue、反馈体验与参与改进的同学。
 
 ---
 
 ## 许可证
 
-本项目基于 [Apache License 2.0](./LICENSE) 开源。
-
-```
-Copyright 2026 Michael-sms
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-```
-
-简而言之：允许自由使用、修改和分发，但需保留原始版权声明，且不可使用项目相关方的商标名称。
+本项目采用 [Apache License 2.0](./LICENSE)。
 
